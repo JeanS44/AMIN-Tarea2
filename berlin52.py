@@ -4,12 +4,20 @@ import time
 import numpy as np
 import pandas as pd
 import igraph as ig
+import math
 
-def solucion_calcular_costo(n, s, c):
+def solucionCalcularCosto(n, s, c):
     aux = c[s[n-1]][s[0]]     
     for i in range(n-1):
         aux += c[s[i]][s[i+1]]
     return aux
+
+def fixMatriz(m):
+    for i in range(52):
+        for j in range(52):
+            if m[i][j] == -1:
+                m[i][j] = 0
+    return m
 
 def inicializarSolucionInicial(cant_ciudades):
     SolucionInicial = np.array([])
@@ -18,17 +26,35 @@ def inicializarSolucionInicial(cant_ciudades):
         np.random.shuffle(SolucionInicial)
     return SolucionInicial
 
-def inicializarMatrizFeromona(matriz,x,y, initw):
-    m_feromona = np.full((x,y),initw,dtype=float)
+def inicializarMatrizFeromona(x, y, initw):
+    m_feromona = np.full((x, y), initw, dtype=float)
     return m_feromona
 
-def assignHormigasAColonias(cant_hormigas, cant_ciudades):
+def asignarHormigasAlMapa(cant_hormigas, cant_ciudades, m_memoria):
     xyHormigasAColonias = np.full((cant_hormigas, cant_ciudades), 0)
     for i in range(0, cant_hormigas):
-        xyHormigasAColonias[i][0] = np.random.randint(0, cant_ciudades-1)
+        randomInt = np.random.randint(0, cant_ciudades-1)
+        xyHormigasAColonias[i][0] = randomInt
+        m_memoria[i][randomInt] = 1
     return xyHormigasAColonias
 
+def matrizTransicion(m_colonia, m_heuristica, m_feromona, m_memoria, b):
+    HxV = np.full_like(m_memoria, 0, dtype=np.longdouble)
+    i = 0
+    while(i < len(m_heuristica)):
+        if m_memoria[i] == 0:
+            # Aquí se calculará la multiplicación entre la Matríz de heuristica
+            # con la matríz de feromóna
+            Tij = m_feromona[m_colonia][i]
+            Nij = m_heuristica[m_colonia][i]
+            NijpowB = math.pow(Nij, b)
+            TxN = Tij * NijpowB
+            HxV[i] = TxN
+        i += 1
+    return HxV
+
 if len(sys.argv) == 8:
+    # Asignación de parámetros.
     np.set_printoptions(threshold=sys.maxsize)
     np.set_printoptions(suppress=True)
     seed = int(sys.argv[1])
@@ -42,48 +68,54 @@ if len(sys.argv) == 8:
     beta = float(sys.argv[5])
     q0 = float(sys.argv[6])
     data = sys.argv[7]
-    """ print(sys.argv[0], " ", seed, " ", n, " ", iter, " ", alpha, " ", beta, " ", q0, " ", data) """
+    print(sys.argv[0], " Seed:", seed, " n:", n, " Iteraciones:", iter, " Alpha:", alpha, " Beta:", beta, " q0:", q0, " Name:", data)
+    # Término de asignación de parámetros.
+
+    # Extracción de coordenadas en el archivo 'berlin52.tsp.txt'.
     xy_coordenadas = pd.read_table(data, header=None, skiprows=6, skipfooter=1, delim_whitespace=True, engine='python').drop(0, axis=1).to_numpy(dtype=float)
-    cant_variables = xy_coordenadas.shape[0]
-    """ print(xy_coordenadas) """
-    """ print(cant_variables) """
-    xy_distancia = np.full((cant_variables, cant_variables), fill_value=-1, dtype=float)
-    for i in range(cant_variables-1):
-        for j in range(i+1, cant_variables):
+    cant_ciudades = xy_coordenadas.shape[0]
+    # Termino de extracción de coordenadas del archivo.
+
+    # Se forma la matríz de distancia y heurística.
+    xy_distancia = np.full((cant_ciudades, cant_ciudades), fill_value=-1, dtype=float)
+    for i in range(cant_ciudades-1):
+        for j in range(i+1, cant_ciudades):
             xy_distancia[i][j] = np.sqrt(np.sum(np.square(xy_coordenadas[i]-xy_coordenadas[j])))
             xy_distancia[j][i] = xy_distancia[i][j]
+    xy_distancia = fixMatriz(xy_distancia)
     xy_distancia = np.around(xy_distancia, decimals=4)
-    """ print("Matriz distancia:") """
-    """ print(xy_distancia) """
     xy_heuristica = 1/xy_distancia
-    """ print("Matríz heurística",xy_heuristica) """
+    # Término de la formación de la matríz de distancia y heurística.
     # Uso de algoritmo
-    # Matriz feromóna
-    matriz_feromona = inicializarMatrizFeromona(xy_heuristica, cant_variables, cant_variables, -1)
-    print("Matríz feromóna: ", matriz_feromona)
     i = 1
-    # Solución inicial
-    sol_inic = inicializarSolucionInicial(cant_variables)
-    calc_fitness = solucion_calcular_costo(cant_variables, sol_inic, xy_distancia)
-    """ print("Costo de la solución: ", calc_fitness) """
-    matriz_transicion = np.array([])
-    matriz_feromonainit = np.array([])
-    matriz_feromonainit = np.append(matriz_feromonainit, 1/calc_fitness)
+    # Solución inicial, generamos un arreglo desde 0 hasta la cant_ciudades-1 y se procede a calcular el fitness de esta solución.
+    solucion_inicial = inicializarSolucionInicial(cant_ciudades)
+    calcular_fitness = solucionCalcularCosto(cant_ciudades, solucion_inicial, xy_distancia)
+    matriz_feromona = inicializarMatrizFeromona(cant_ciudades, cant_ciudades, 1/(calcular_fitness*cant_ciudades))
+    matriz_memoria = np.zeros((n, cant_ciudades), dtype=int)
+    matriz_colonia = asignarHormigasAlMapa(n, cant_ciudades, matriz_memoria)
+    print(matriz_colonia)
+    """ print("Matríz feromóna: ", matriz_feromona) """
+    """ print("Costo de la solución: ", calcular_fitness) """
+    # Término de la solución inicial.
+    
+    j0 = 0
     while i <= iter:
         # Matriz de hormigas
-        print("Hormigas a Colonia: ", assignHormigasAColonias(n, cant_variables))
-        for i in range(0, cant_variables):
-            for j in range(0, n):
+        """ print("Hormigas a Colonia: ", asignarHormigasAlMapa(n, cant_ciudades)) """
+        for i in range(1, cant_ciudades):
+            for j in range(n):
                 nq0 = np.random.rand()
+                mT = matrizTransicion(matriz_colonia[j][i-1], xy_heuristica, matriz_feromona, matriz_memoria[j], beta)
+                print(nq0)
+                print("mT", len(mT))
                 if nq0 <= q0:
-                    
-                    print(matriz_feromonainit)
+                    j0 = np.random.choice(np.where(mT == mT.max())[0])
+                    print("j0xd", j0, j, i)
                 else:
-                    print("xd")
-        print("Primera solución: ", inicializarSolucionInicial(cant_variables))
-        print("Matriz de transicion: ", matriz_transicion)
+                    
+                    print("xdd")
         i += 1
-    
 else:
     print("Porfavor reingrese los parámetros de manera correcta.")
     print("Parametros a ingresar: 'Nombre del archivo' 'Semilla' 'Tamaño de la colonia' 'Cantidad de iteraciones' 'Factor de evaporación' 'Paso de heurística' 'Probabilidad limite' ")
