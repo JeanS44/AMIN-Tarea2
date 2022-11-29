@@ -17,7 +17,7 @@ def determinarRuleta(TxN):
     sumaTxN = np.sum(TxN)
     for i in range(len(TxN)):
         x[i] = TxN[i]/sumaTxN
-    pos = np.where(np.random.uniform(min(x), max(x)) < x)[0]
+    pos = np.where(np.random.uniform(min(x), max(x), len(TxN)) < x)[0]
     aux = 0
     for i in pos:
         if x[i] > aux:
@@ -40,7 +40,7 @@ def inicializarSolucionInicial(cant_ciudades):
     return SolucionInicial
 
 def inicializarMatrizFeromona(x, y, initw):
-    m_feromona = np.full((x, y), initw, dtype=float)
+    m_feromona = np.full((x, y), initw, dtype=np.longdouble)
     return m_feromona
 
 def asignarHormigasAlMapa(cant_hormigas, cant_ciudades, m_memoria):
