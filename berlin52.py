@@ -12,6 +12,19 @@ def solucionCalcularCosto(n, s, c):
         aux += c[s[i]][s[i+1]]
     return aux
 
+def determinarRuleta(TxN):
+    x = np.full_like(TxN, 0, dtype=np.longdouble)
+    sumaTxN = np.sum(TxN)
+    for i in range(len(TxN)):
+        x[i] = TxN[i]/sumaTxN
+    pos = np.where(np.random.uniform(min(x), max(x)) < x)[0]
+    aux = 0
+    for i in pos:
+        if x[i] > aux:
+            j0 = i
+            aux = x[i]
+    return j0
+
 def fixMatriz(m):
     for i in range(52):
         for j in range(52):
@@ -87,7 +100,7 @@ if len(sys.argv) == 8:
     xy_heuristica = 1/xy_distancia
     # Término de la formación de la matríz de distancia y heurística.
     # Uso de algoritmo
-    i = 1
+    i = 0
     # Solución inicial, generamos un arreglo desde 0 hasta la cant_ciudades-1 y se procede a calcular el fitness de esta solución.
     solucion_inicial = inicializarSolucionInicial(cant_ciudades)
     calcular_fitness = solucionCalcularCosto(cant_ciudades, solucion_inicial, xy_distancia)
@@ -100,7 +113,7 @@ if len(sys.argv) == 8:
     # Término de la solución inicial.
     
     j0 = 0
-    while i <= iter:
+    while i < iter:
         # Matriz de hormigas
         """ print("Hormigas a Colonia: ", asignarHormigasAlMapa(n, cant_ciudades)) """
         for i in range(1, cant_ciudades):
@@ -111,10 +124,10 @@ if len(sys.argv) == 8:
                 print("mT", len(mT))
                 if nq0 <= q0:
                     j0 = np.random.choice(np.where(mT == mT.max())[0])
-                    print("j0xd", j0, j, i)
+                    print("j0 1", j0, j, i)
                 else:
-                    
-                    print("xdd")
+                    j0 = determinarRuleta(mT)
+                    print("j0 2", j0, j, i)
         i += 1
 else:
     print("Porfavor reingrese los parámetros de manera correcta.")
