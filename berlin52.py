@@ -29,7 +29,7 @@ def fixMatriz(m):
     for i in range(52):
         for j in range(52):
             if m[i][j] == -1:
-                m[i][j] = 0
+                m[i][j] = 1
     return m
 
 def inicializarSolucionInicial(cant_ciudades):
@@ -97,9 +97,10 @@ if len(sys.argv) == 8:
             xy_distancia[j][i] = xy_distancia[i][j]
     xy_distancia = fixMatriz(xy_distancia)
     xy_distancia = np.around(xy_distancia, decimals=4)
-    xy_heuristica = 1/xy_distancia
+    xy_heuristica = np.divide(1,xy_distancia)
     # Término de la formación de la matríz de distancia y heurística.
     # Uso de algoritmo
+    
     i = 0
     # Solución inicial, generamos un arreglo desde 0 hasta la cant_ciudades-1 y se procede a calcular el fitness de esta solución.
     solucion_inicial = inicializarSolucionInicial(cant_ciudades)
@@ -107,11 +108,12 @@ if len(sys.argv) == 8:
     matriz_feromona = inicializarMatrizFeromona(cant_ciudades, cant_ciudades, 1/(calcular_fitness*cant_ciudades))
     matriz_memoria = np.zeros((n, cant_ciudades), dtype=int)
     matriz_colonia = asignarHormigasAlMapa(n, cant_ciudades, matriz_memoria)
+    Tij0 = np.divide(1, (cant_ciudades*calcular_fitness))
     print(matriz_colonia)
-    """ print("Matríz feromóna: ", matriz_feromona) """
+    print("Matríz feromóna: ", matriz_feromona)
     """ print("Costo de la solución: ", calcular_fitness) """
     # Término de la solución inicial.
-    
+
     j0 = 0
     while i < iter:
         # Matriz de hormigas
@@ -120,14 +122,19 @@ if len(sys.argv) == 8:
             for j in range(n):
                 nq0 = np.random.rand()
                 mT = matrizTransicion(matriz_colonia[j][i-1], xy_heuristica, matriz_feromona, matriz_memoria[j], beta)
-                print(nq0)
-                print("mT", len(mT))
+                """ print(nq0)
+                print("mT", len(mT)) """
                 if nq0 <= q0:
                     j0 = np.random.choice(np.where(mT == mT.max())[0])
-                    print("j0 1", j0, j, i)
+                    """ print("j0 11111111111", j0, j, i) """
                 else:
                     j0 = determinarRuleta(mT)
-                    print("j0 2", j0, j, i)
+                    """ print("j0 22222222222", j0, j, i) """
+                Tij = (1-alpha)*matriz_feromona[matriz_colonia[j][i]][j0] * alpha*Tij0
+                matriz_feromona[matriz_colonia[j][i]][j0] = Tij
+                matriz_memoria[j][j0] = 1
+                matriz_colonia[j][i] = j0
+        print(matriz_feromona)
         i += 1
 else:
     print("Porfavor reingrese los parámetros de manera correcta.")
